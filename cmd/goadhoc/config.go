@@ -76,26 +76,3 @@ func unmarshalConfigFile(confPath string) (*appConfig, error) {
 	}
 	return config, err
 }
-
-func (config appConfig) marshalConfigFile(confPath string) error {
-	homeDir, err := os.UserHomeDir()
-	panicOn(err)
-	homeDir = filepath.Clean(homeDir)
-	homeDirWithSeparator := fmt.Sprintf("%v%c", homeDir, filepath.Separator)
-	for i, project := range config.Projects {
-		if strings.Index(project.Directory, homeDirWithSeparator) != 0 {
-			continue
-		}
-		config.Projects[i].Directory = strings.Replace(project.Directory, homeDir, homeVariable, 1)
-	}
-	s, err := toml.Marshal(config)
-	if err != nil {
-		return err
-	}
-	outfile, err := os.OpenFile(confPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	_, err = outfile.Write(s)
-	if err != nil {
-		return err
-	}
-	return nil
-}

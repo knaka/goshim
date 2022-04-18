@@ -9,8 +9,7 @@ import (
 	"strings"
 )
 
-func getBinDir() string {
-	var binDir string
+func getGoBinDir() (binDir string) {
 	if len(os.Getenv("GOBIN")) > 0 {
 		binDir = os.Getenv("GOBIN")
 	} else if len(os.Getenv("GOPATH")) > 0 {
@@ -31,106 +30,102 @@ func getBinDir() string {
 	if !fileinfo.IsDir() {
 		log.Fatalf("%s is not directory\n", binDir)
 	}
-	return binDir
+	return
 }
 
-func isCalledAsGoadhoc(cmd string) bool {
+func calledAsGoadhoc(cmd string) bool {
 	return strings.HasSuffix(cmd, "goadhoc")
 }
 
 func main() {
 	waitForDebugger()
 
-	homeDir, err := os.UserHomeDir()
-	panicOn(err)
-	// todo: 配慮 for the the other platforms
-	confDir := filepath.Join(homeDir, ".config")
-	err = createConfigFileIfNotExists(confDir)
+	err := createConfigFileIfNotExists(userConfigDir)
 	panicOn(err)
 
-	config, err := unmarshalConfigFile(filepath.Join(confDir, "goadhoc.toml"))
+	config, err := unmarshalConfigFile(filepath.Join(userConfigDir, "goadhoc.toml"))
 	panicOn(err)
 
-	// execCommandAndNotReturn(config, []string{"/Users/knaka/go/bin/dm", "/etc/fstab.hd"})
-
-	if !isCalledAsGoadhoc(os.Args[0]) {
+	if !calledAsGoadhoc(os.Args[0]) {
 		_ = execCommandAndNotReturn(config, os.Args)
-		panic("???")
+		panic("Failed to exec(2)")
 	}
 
 	pflag.Usage = func() {
-		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s [options]:\n", os.Args[0])
+		_, _ = fmt.Fprintln(os.Stderr, fmt.Sprintf("Usage: %v [options] subcmd", os.Args[0]))
+		_, _ = fmt.Fprintln(os.Stderr)
+		_, _ = fmt.Fprintln(os.Stderr, "Options:")
 		pflag.PrintDefaults()
+		_, _ = fmt.Fprintln(os.Stderr)
+		_, _ = fmt.Fprintln(os.Stderr, "Subcmds:")
+		_, _ = fmt.Fprintln(os.Stderr, "  install: Installs symlinks")
 	}
 	var debug bool
 	pflag.BoolVarP(&debug, "debug", "", false, "debug")
 	var shouldPutHelpAndExit bool
 	pflag.BoolVarP(&shouldPutHelpAndExit, "help", "h", false, "display this help and exit")
 	_ = pflag.CommandLine.Parse(os.Args[1:])
-	if shouldPutHelpAndExit {
+	if shouldPutHelpAndExit || len(pflag.Args()) == 0 {
 		pflag.Usage()
 		os.Exit(0)
 	}
-	if len(pflag.Args()) == 0 {
-		log.Fatal("too few argument")
-	}
-	cmdPath, err := filepath.Abs(os.Args[0])
+
+	cmdPath, err := os.Executable()
+	panicOn(err)
+	cmdPath, err = filepath.EvalSymlinks(cmdPath)
 	panicOn(err)
 	cmdPath = filepath.Clean(cmdPath)
 	if debug {
 		_, _ = fmt.Fprintln(os.Stderr, "cmdPath", cmdPath)
 	}
 
-	for _, project := range config.Projects {
-		fmt.Println("Project directory", project.Directory)
-	}
-
-	if debug {
-		log.Println("0", os.Args[0])
-	}
-
-	cmd := pflag.Args()[0]
-	switch cmd {
+	subCmd := pflag.Args()[0]
+	switch subCmd {
 	case "install":
 		_ = updateSymlinks(cmdPath, config.Projects)
-	case "update":
-		_ = updateSymlinks(cmdPath, config.Projects)
-		// todo:
-		// compileAll(config.Projects)
+	case "rebuild":
+		// todo
 	}
 }
 
-func removeSysmlinks(cmdPath, bindir string) error {
-	// If no result, cmds = nil and err = nil
-	cmds, err := filepath.Glob(filepath.Join(bindir, "*"))
+func removeSysmlinks(cmdPath, binDir string) error {
+	// If no result, cmdLinkPaths = nil and err = nil
+	cmdLinkPaths, err := filepath.Glob(filepath.Join(binDir, "*"))
 	if err != nil {
 		return err
 	}
-	for _, cmd := range cmds {
-		target, err := filepath.EvalSymlinks(cmd)
-		panicOn(err)
-		// todo:
-		if cmdPath == cmd {
-			fmt.Fprintln(os.Stderr, "removing", target)
+	for _, cmdLinkPath := range cmdLinkPaths {
+		fileInfo, err := os.Lstat(cmdLinkPath)
+		if err != nil || (fileInfo.Mode()&os.ModeSymlink != os.ModeSymlink) {
+			continue
+		}
+		linkTarget, err := filepath.EvalSymlinks(cmdLinkPath)
+		if err != nil {
+			continue
+		}
+		if cmdPath == linkTarget {
+			err = os.Remove(cmdLinkPath)
+			panicOn(err)
 		}
 	}
 	return nil
 }
 
 func updateSymlinks(cmdPath string, projects []Project) error {
-	bindir := getBinDir()
-	_ = removeSysmlinks(cmdPath, bindir)
+	binDir := getGoBinDir()
+	_ = removeSysmlinks(cmdPath, binDir)
 	for _, project := range projects {
-		cmdDirs, err := filepath.Glob(filepath.Join(project.Directory, "cmd", "*"))
+		cmdSrcDirs, err := filepath.Glob(filepath.Join(project.Directory, "cmd", "*"))
 		if err != nil {
 			return err
 		}
-		for _, cmdDir := range cmdDirs {
-			base := filepath.Base(cmdDir)
-			if base[0] == '_' {
+		for _, cmdSrcDir := range cmdSrcDirs {
+			cmdBase := filepath.Base(cmdSrcDir)
+			if cmdBase[0] == '_' {
 				continue
 			}
-			linkPath := filepath.Join(bindir, base)
+			linkPath := filepath.Join(binDir, cmdBase)
+			_ = os.Remove(linkPath)
 			err = os.Symlink(cmdPath, linkPath)
 			panicOn(err)
 		}

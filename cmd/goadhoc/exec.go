@@ -14,57 +14,59 @@ import (
 )
 
 func sourcesHash(wildcard string) string {
-	files, err := filepath.Glob(wildcard)
-	sort.Strings(files)
+	paths, err := filepath.Glob(wildcard)
 	panicOn(err)
-	hasher := sha256.New()
-	for _, file := range files {
-		infile, _ := os.Open(file)
-		_, _ = io.Copy(hasher, infile)
+	sort.Strings(paths)
+	hashGenerator := sha256.New()
+	for _, path := range paths {
+		func() {
+			infile, err := os.Open(path)
+			panicOn(err)
+			defer func() { _ = infile.Close() }()
+			_, err = io.Copy(hashGenerator, infile)
+			panicOn(err)
+		}()
 	}
-	return hex.EncodeToString(hasher.Sum(nil))[0:7]
+	return hex.EncodeToString(hashGenerator.Sum(nil))[0:7]
 }
 
 func execCommandAndNotReturn(config *appConfig, args []string) int {
 	cmdBase := filepath.Base(args[0])
-	/* cmdRealPath */ _, err := filepath.EvalSymlinks(args[0])
-	var goSrcDir string
-	var cmdDir string
-	config.walkProjectCmds(func(project *Project, dir string) {
-		base := filepath.Base(dir)
-		if base == cmdBase {
-			goSrcDir = project.Directory
-			cmdDir = dir
+	var goProjectDir string
+	var srcDir string
+	config.walkProjectCmds(func(project *Project, srcDirCandidate string) {
+		srcDirBase := filepath.Base(srcDirCandidate)
+		if cmdBase == srcDirBase {
+			goProjectDir = project.Directory
+			srcDir = srcDirCandidate
 		}
 	})
-	if goSrcDir == "" {
-		panic("not found")
+	if goProjectDir == "" || srcDir == "" {
+		panic("Source dir not found")
 	}
-	bindir := getBinDir()
-	cacheDir := filepath.Join(bindir, ".goadhoc")
-	err = os.MkdirAll(cacheDir, 0755)
+	binDir := getGoBinDir()
+	cacheDir := filepath.Join(binDir, ".goadhoc")
+	err := os.MkdirAll(cacheDir, 0755)
 	panicOn(err)
-	srcHash := sourcesHash(filepath.Join(cmdDir, "*.go"))
-	cacheBin := filepath.Join(cacheDir, fmt.Sprintf("%v.%v", cmdBase, srcHash))
-	if _, err = os.Stat(cacheBin); err != nil {
-		oldBins, err := filepath.Glob(filepath.Join(cacheDir, fmt.Sprintf("%v.*", cmdBase)))
+	hash := sourcesHash(filepath.Join(srcDir, "*.go"))
+	cacheBinPath := filepath.Join(cacheDir, fmt.Sprintf("%v.%v", cmdBase, hash))
+	if _, err = os.Stat(cacheBinPath); err != nil {
+		oldBinPaths, err := filepath.Glob(filepath.Join(cacheDir, fmt.Sprintf("%v.*", cmdBase)))
 		panicOn(err)
-		for _, oldBin := range oldBins {
-			_ = os.Remove(oldBin)
+		for _, oldBinPath := range oldBinPaths {
+			_ = os.Remove(oldBinPath)
 		}
-		prevDir, _ := filepath.Abs(".")
-		err = os.Chdir(goSrcDir)
+		savedDir, _ := filepath.Abs(".")
+		err = os.Chdir(goProjectDir)
 		panicOn(err)
-		pwd, _ := os.Getwd()
-		log.Println("cp1:", pwd)
-		b, err := exec.Command("go", "build", "-o", cacheBin, cmdDir).Output()
+		output, err := exec.Command("go", "build", "-o", cacheBinPath, srcDir).Output()
 		if err != nil {
-			log.Println(string(b))
-			panic("compilation failed")
+			log.Println(string(output))
+			panic("Compilation failed")
 		}
-		os.Chdir(prevDir)
+		_ = os.Chdir(savedDir)
 	}
-	args[0] = cacheBin
-	err = syscall.Exec(cacheBin, args, os.Environ())
+	args[0] = cacheBinPath
+	err = syscall.Exec(cacheBinPath, args, os.Environ())
 	return 1
 }

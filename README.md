@@ -2,6 +2,8 @@
 title: goadhoc(1) Document
 ---
 
+> Document in Japanese: <!-- mdpplink href=./README-ja.md -->[goadhoc(1) ドキュメント（日本語）](./README-ja.md)<!-- /mdpplink -->
+
 goadhoc(1)
 
 # NAME

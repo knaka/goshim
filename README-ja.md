@@ -10,7 +10,9 @@ goadhoc - ソースに変更があった Go プログラムだけを再コンパ
 
 # INSTALLATION
 
-  $ go install github.com/knaka/goadhoc/cmd/goadhoc@latest
+```
+$ go install github.com/knaka/goadhoc/cmd/goadhoc@latest
+```
 
 # SYNOPSIS
 
@@ -26,3 +28,6 @@ goadhoc - ソースに変更があった Go プログラムだけを再コンパ
 
 前回実行時以降にソースが修正されていた場合は、自動的に再ビルドして実行する。
 
+# DESCRIPTION
+
+# OPTIONS

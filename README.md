@@ -37,7 +37,9 @@ By default, `~/src/go/` is the target project.
 
 The following will create a symbolic links under `$GOBIN` with the same names as the directory names under `~/src/go/src/cmd/`.
 
-  $ goadhoc install
+```
+$ goadhoc install
+```
 
 <!--
 上記で作成されたシンボリックリンクを実行すると、対象のプログラムをビルドして `$GOBIN/.goadhoc/` 以下にインストールし、実行の際に指定された引数を渡してそのバイナリを透過的に実行する。
@@ -50,3 +52,7 @@ Executing the symbolic link created above will build and install the target prog
 -->
 
 If the source code has been modified since the last run, it is automatically rebuilt and executed.
+
+# DESCRIPTION
+
+# OPTIONS

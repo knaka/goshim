@@ -12,8 +12,7 @@ goadhoc(1)
 goadhoc - ソースに変更があった Go プログラムだけを再コンパイルして実行するプログラム
 -->
 
-goadhoc - Re-compiles only programs with updated source codes and execute tranceparency
-
+goadhoc - Re-compiles only updated Go-source codes and execute transparently
 
 # INSTALLATION
 

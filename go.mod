@@ -1,6 +1,6 @@
 module github.com/knaka/goshim
 
-go 1.16
+go 1.18
 
 require (
 	github.com/pelletier/go-toml/v2 v2.0.0-beta.8

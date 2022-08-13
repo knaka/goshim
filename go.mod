@@ -1,4 +1,4 @@
-module github.com/knaka/goadhoc
+module github.com/knaka/goshim
 
 go 1.16
 

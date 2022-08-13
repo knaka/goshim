@@ -34,8 +34,8 @@ func getBinDir() string {
 	return binDir
 }
 
-func isCalledAsGoadhoc(cmd string) bool {
-	return strings.HasSuffix(cmd, "goadhoc")
+func isCalledAsGoshim(cmd string) bool {
+	return strings.HasSuffix(cmd, "goshim")
 }
 
 func main() {
@@ -48,10 +48,10 @@ func main() {
 	err = createConfigFileIfNotExists(confDir)
 	panicOn(err)
 
-	config, err := unmarshalConfigFile(filepath.Join(confDir, "goadhoc.toml"))
+	config, err := unmarshalConfigFile(filepath.Join(confDir, "goshim.toml"))
 	panicOn(err)
 
-	if !isCalledAsGoadhoc(os.Args[0]) {
+	if !isCalledAsGoshim(os.Args[0]) {
 		os.Exit(runCommand(config, os.Args))
 	}
 

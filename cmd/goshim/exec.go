@@ -45,7 +45,7 @@ func execCommandAndNotReturn(config *appConfig, args []string) int {
 		panic("Source dir not found")
 	}
 	binDir := getGoBinDir()
-	cacheDir := filepath.Join(binDir, ".goadhoc")
+	cacheDir := filepath.Join(binDir, ".goshim")
 	err := os.MkdirAll(cacheDir, 0755)
 	panicOn(err)
 	hash := sourcesHash(filepath.Join(srcDir, "*.go"))

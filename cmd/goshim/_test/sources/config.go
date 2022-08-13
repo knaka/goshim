@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-//go:embed goadhoc-default.toml
+//go:embed goshim-default.toml
 var defaultConfigToml []byte
 
 const homeVariable = "$HOME"
@@ -37,7 +37,7 @@ func (config *appConfig) walkProjectCmds(walker func(*Project, string)) {
 }
 
 func createConfigFileIfNotExists(confDir string) (err error) {
-	confPath := filepath.Join(confDir, "goadhoc.toml")
+	confPath := filepath.Join(confDir, "goshim.toml")
 	if _, err := os.Stat(confPath); err == nil {
 		return err
 	}

@@ -46,12 +46,12 @@ func Test_createConfigFile(t *testing.T) {
 			},
 			false,
 			func(t *testing.T) {
-				path := filepath.Join(basicTestDir, "goadhoc.toml")
+				path := filepath.Join(basicTestDir, "goshim.toml")
 				if _, err := os.Stat(path); err != nil {
 					t.Fatalf("File does not exist")
 				}
 				hashGotten := fileHash(path)
-				hashExpected := fileHash(filepath.Join("_test", "config_basic_expected", "goadhoc.toml"))
+				hashExpected := fileHash(filepath.Join("_test", "config_basic_expected", "goshim.toml"))
 				if bytes.Compare(hashGotten, hashExpected) != 0 {
 					t.Fatalf("Files do not match")
 				}

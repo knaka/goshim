@@ -13,7 +13,7 @@ import (
 	"syscall"
 )
 
-func sourcesHash(wildcard string) string {
+func getSourcesHash(wildcard string) string {
 	paths, err := filepath.Glob(wildcard)
 	panicOn(err)
 	sort.Strings(paths)
@@ -34,13 +34,17 @@ func execCommandAndNotReturn(config *appConfig, args []string) int {
 	cmdBase := filepath.Base(args[0])
 	var goProjectDir string
 	var srcDir string
-	config.walkProjectCmds(func(project *Project, srcDirCandidate string) {
-		srcDirBase := filepath.Base(srcDirCandidate)
-		if cmdBase == srcDirBase {
-			goProjectDir = project.Directory
-			srcDir = srcDirCandidate
-		}
-	})
+	config.walkProjectCmds(
+		func(project *Project, srcDirCandidate string) (finished bool) {
+			srcDirBase := filepath.Base(srcDirCandidate)
+			if cmdBase == srcDirBase {
+				goProjectDir = project.Directory
+				srcDir = srcDirCandidate
+				return true
+			}
+			return false
+		},
+	)
 	if goProjectDir == "" || srcDir == "" {
 		panic("Source dir not found")
 	}
@@ -48,7 +52,7 @@ func execCommandAndNotReturn(config *appConfig, args []string) int {
 	cacheDir := filepath.Join(binDir, ".goshim")
 	err := os.MkdirAll(cacheDir, 0755)
 	panicOn(err)
-	hash := sourcesHash(filepath.Join(srcDir, "*.go"))
+	hash := getSourcesHash(filepath.Join(srcDir, "*.go"))
 	cacheBinPath := filepath.Join(cacheDir, fmt.Sprintf("%v.%v", cmdBase, hash))
 	if _, err = os.Stat(cacheBinPath); err != nil {
 		oldBinPaths, err := filepath.Glob(filepath.Join(cacheDir, fmt.Sprintf("%v.*", cmdBase)))

@@ -33,8 +33,8 @@ func getGoBinDir() (binDir string) {
 	return
 }
 
-func calledAsGoshim(cmd string) bool {
-	return strings.HasSuffix(cmd, "goshim")
+func calledAsGoshim() bool {
+	return strings.HasSuffix(os.Args[0], "goshim")
 }
 
 func main() {
@@ -43,10 +43,10 @@ func main() {
 	err := createConfigFileIfNotExists(userConfigDir)
 	panicOn(err)
 
-	config, err := unmarshalConfigFile(filepath.Join(userConfigDir, "goshim.toml"))
+	config, err := unmarshalAndBuildConfigFile(filepath.Join(userConfigDir, "goshim.toml"))
 	panicOn(err)
 
-	if !calledAsGoshim(os.Args[0]) {
+	if !calledAsGoshim() {
 		_ = execCommandAndNotReturn(config, os.Args)
 		panic("Failed to exec(2)")
 	}
@@ -83,16 +83,30 @@ func main() {
 	switch subCmd {
 	case "install":
 		_ = updateSymlinks(cmdPath, config.Projects)
-	case "rebuild":
+	case "update":
+		_ = updateSymlinks(cmdPath, config.Projects)
+	case "uninstall":
+		// goshim uninstall path/to/project/cmd/foo
+		// goshim uninstall gofoo
+		// todo
+	case "build":
+		// goshim build path/to/project/cmd/foo
+		// goshim build gofoo
+		// todo
+	case "project":
+		// goshim project add path/to/another_project
 		// todo
 	}
 }
 
-func removeSysmlinks(cmdPath, binDir string) error {
+func removeSymlinks(cmdPath, binDir string) error {
 	// If no result, cmdLinkPaths = nil and err = nil
 	cmdLinkPaths, err := filepath.Glob(filepath.Join(binDir, "*"))
 	if err != nil {
 		return err
+	}
+	if cmdLinkPaths == nil {
+		return nil
 	}
 	for _, cmdLinkPath := range cmdLinkPaths {
 		fileInfo, err := os.Lstat(cmdLinkPath)
@@ -113,7 +127,7 @@ func removeSysmlinks(cmdPath, binDir string) error {
 
 func updateSymlinks(cmdPath string, projects []Project) error {
 	binDir := getGoBinDir()
-	_ = removeSysmlinks(cmdPath, binDir)
+	_ = removeSymlinks(cmdPath, binDir)
 	for _, project := range projects {
 		cmdSrcDirs, err := filepath.Glob(filepath.Join(project.Directory, "cmd", "*"))
 		if err != nil {

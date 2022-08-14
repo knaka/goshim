@@ -26,12 +26,14 @@ type appConfig struct {
 	Projects []Project `toml:"projects"`
 }
 
-func (config *appConfig) walkProjectCmds(walker func(*Project, string)) {
+func (config *appConfig) walkProjectCmds(walker func(*Project, string) (finished bool)) {
 	for _, project := range config.Projects {
 		dirs, err := filepath.Glob(filepath.Join(project.Directory, "cmd", "*"))
 		panicOn(err)
 		for _, dir := range dirs {
-			walker(&project, dir)
+			if walker(&project, dir) {
+				break
+			}
 		}
 	}
 }
@@ -57,10 +59,11 @@ func createConfigFileIfNotExists(confDir string) (err error) {
 	return nil
 }
 
-func unmarshalConfigFile(confPath string) (*appConfig, error) {
-	data, _ := ioutil.ReadFile(confPath)
+func unmarshalAndBuildConfigFile(confPath string) (*appConfig, error) {
+	data, err := ioutil.ReadFile(confPath)
+	panicOn(err)
 	config := &appConfig{}
-	err := toml.Unmarshal([]byte(data), config)
+	err = toml.Unmarshal([]byte(data), config)
 	homeDir, err := os.UserHomeDir()
 	panicOn(err)
 	homeDir = filepath.Clean(homeDir)

@@ -51,19 +51,23 @@ func execCommandAndNotReturn(config *appConfig, args []string) int {
 	binDir := getGoBinDir()
 	cacheDir := filepath.Join(binDir, ".goshim")
 	err := os.MkdirAll(cacheDir, 0755)
-	panicOn(err)
+	if err != nil {
+		log.Panicf("panic af96eb5 (%v)", err)
+	}
 	hash := getSourcesHash(filepath.Join(srcDir, "*.go"))
 	cacheBinPath := filepath.Join(cacheDir, fmt.Sprintf("%v.%v", cmdBase, hash))
 	if _, err = os.Stat(cacheBinPath); err != nil {
 		oldBinPaths, err := filepath.Glob(filepath.Join(cacheDir, fmt.Sprintf("%v.*", cmdBase)))
-		panicOn(err)
+		if err != nil {
+			log.Panicf("panic 2a2768a (%v)", err)
+		}
 		for _, oldBinPath := range oldBinPaths {
 			_ = os.Remove(oldBinPath)
 		}
 		savedDir, _ := filepath.Abs(".")
-		err = os.Chdir(goProjectDir)
-		panicOn(err)
-		output, err := exec.Command("go", "build", "-o", cacheBinPath, srcDir).Output()
+		cmd := exec.Command("go", "build", "-o", cacheBinPath, srcDir)
+		cmd.Dir = goProjectDir
+		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Println(string(output))
 			panic("Compilation failed")
